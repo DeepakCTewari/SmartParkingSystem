@@ -17,6 +17,7 @@ public class WaitlistManager {
         queue.add(vehicleNumber.toUpperCase());
         persist();
     }
+    
 
     public String pop() {
         String v = queue.poll();

@@ -1,64 +1,128 @@
 import java.util.*;
 
-/*
- * Dijkstra with path reconstruction.
- * Edge is a simple public inner-type used by FileUtil and ParkingManager.
- */
 public class Dijkstra {
-
     public static class Edge {
         public String to;
         public double weight;
-        public Edge(String to, double weight) { this.to = to; this.weight = weight; }
+        
+        public Edge(String to, double weight) {
+            this.to = to;
+            this.weight = weight;
+        }
+        
+        @Override
+        public String toString() {
+            return "-> " + to + " (" + weight + "km)";
+        }
+    }
+
+    public static class Result {
+        public Map<String, Double> dist = new HashMap<>();
+        public Map<String, String> prev = new HashMap<>();
+        
+        public Result() {
+            dist = new HashMap<>();
+            prev = new HashMap<>();
+        }
     }
 
     private Map<String, List<Edge>> graph;
 
     public Dijkstra(Map<String, List<Edge>> graph) {
-        this.graph = graph;
-    }
-
-    public static class Result {
-        public Map<String, Double> dist;
-        public Map<String, String> prev;
-        public Result(Map<String, Double> dist, Map<String, String> prev) { this.dist = dist; this.prev = prev; }
+        this.graph = graph != null ? graph : new HashMap<>();
     }
 
     public Result shortestPath(String start) {
-        Map<String, Double> dist = new HashMap<>();
-        Map<String, String> prev = new HashMap<>();
-        for (String node : graph.keySet()) dist.put(node, Double.MAX_VALUE);
-        if (!dist.containsKey(start)) dist.put(start, 0.0); // in case start is a temporary node like USER
-        dist.put(start, 0.0);
+        Result result = new Result();
+        if (graph.isEmpty() || !graph.containsKey(start)) {
+            return result;
+        }
 
-        PriorityQueue<Map.Entry<String, Double>> pq = new PriorityQueue<>(Map.Entry.comparingByValue());
-        pq.offer(new AbstractMap.SimpleEntry<>(start, 0.0));
+        PriorityQueue<Node> pq = new PriorityQueue<>(Comparator.comparingDouble(n -> n.dist));
+        Set<String> visited = new HashSet<>();
+
+        // Initialize distances
+        for (String node : graph.keySet()) {
+            result.dist.put(node, Double.MAX_VALUE);
+        }
+        result.dist.put(start, 0.0);
+        pq.offer(new Node(start, 0.0));
 
         while (!pq.isEmpty()) {
-            Map.Entry<String, Double> e = pq.poll();
-            String u = e.getKey();
-            double d = e.getValue();
-            if (d > dist.getOrDefault(u, Double.MAX_VALUE)) continue;
-            for (Edge edge : graph.getOrDefault(u, Collections.emptyList())) {
-                double nd = dist.get(u) + edge.weight;
-                if (nd < dist.getOrDefault(edge.to, Double.MAX_VALUE)) {
-                    dist.put(edge.to, nd);
-                    prev.put(edge.to, u);
-                    pq.offer(new AbstractMap.SimpleEntry<>(edge.to, nd));
+            Node current = pq.poll();
+            if (visited.contains(current.id)) continue;
+            visited.add(current.id);
+
+            List<Edge> edges = graph.get(current.id);
+            if (edges == null) continue;
+
+            for (Edge edge : edges) {
+                if (!visited.contains(edge.to)) {
+                    double newDist = result.dist.get(current.id) + edge.weight;
+                    Double currentDist = result.dist.get(edge.to);
+                    if (currentDist == null || newDist < currentDist) {
+                        result.dist.put(edge.to, newDist);
+                        result.prev.put(edge.to, current.id);
+                        pq.offer(new Node(edge.to, newDist));
+                    }
                 }
             }
         }
-        return new Result(dist, prev);
+        return result;
     }
 
-    public static List<String> reconstructPath(String start, String end, Map<String, String> prev) {
-        LinkedList<String> path = new LinkedList<>();
-        String cur = end;
-        while (cur != null) {
-            path.addFirst(cur);
-            cur = prev.get(cur);
+    // Fixed: Proper path reconstruction with all intermediate nodes
+    public static List<String> reconstructPath(String from, String to, Map<String, String> prev) {
+        List<String> path = new ArrayList<>();
+        
+        if (from == null || to == null || prev == null) {
+            return path;
         }
-        if (path.isEmpty() || !path.getFirst().equals(start)) return Collections.emptyList();
+
+        // If start and end are the same
+        if (from.equals(to)) {
+            path.add(from);
+            return path;
+        }
+
+        // If no path exists
+        if (!prev.containsKey(to)) {
+            return path;
+        }
+
+        // Build path backwards from destination to start
+        Stack<String> stack = new Stack<>();
+        String current = to;
+        
+        while (current != null) {
+            stack.push(current);
+            current = prev.get(current);
+            if (current != null && current.equals(from)) {
+                stack.push(current);
+                break;
+            }
+        }
+
+        // If we didn't reach the start node, no valid path
+        if (stack.isEmpty() || !stack.peek().equals(from)) {
+            return new ArrayList<>();
+        }
+
+        // Reverse the path to get start-to-end order
+        while (!stack.isEmpty()) {
+            path.add(stack.pop());
+        }
+
         return path;
+    }
+
+    private static class Node {
+        String id;
+        double dist;
+
+        Node(String id, double dist) {
+            this.id = id;
+            this.dist = dist;
+        }
     }
 }

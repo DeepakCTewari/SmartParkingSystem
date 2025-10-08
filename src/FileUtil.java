@@ -29,7 +29,16 @@ public class FileUtil {
                 double rating = Double.parseDouble(p[4].trim());
                 double lat = Double.parseDouble(p[5].trim());
                 double lon = Double.parseDouble(p[6].trim());
-                list.add(new ParkingLot(id, loc, total, avail, rating, lat, lon));
+                double costPerHour = 0.0; // default cost
+                boolean secure = false;
+                boolean covered = false;
+                boolean evCharging = false;
+                boolean valet = false;
+
+                list.add(new ParkingLot(id, loc, total, avail, rating, 
+                        costPerHour, secure, covered, evCharging, valet,
+                        lat, lon));
+
             }
         }
         return list;

@@ -21,26 +21,29 @@ public class Main {
         UserManager userManager = new UserManager(USER_FILE);
 
         Scanner sc = new Scanner(System.in);
-        System.out.println("=== Smart Parking Recommendation & Navigation System ===\n");
+        System.out.println("\n=== 🅿️ SMART PARKING SYSTEM 🚗 ===\n");
 
         boolean running = true;
         while (running) {
-            System.out.println("\n1. Login");
-            System.out.println("2. Register new User/Admin");
-            System.out.println("3. Exit");
+            System.out.println("\n🔐 MAIN MENU");
+            System.out.println("1️⃣ Login");
+            System.out.println("2️⃣ Register new User/Admin");
+            System.out.println("3️⃣ System Statistics");
+            System.out.println("4️⃣ Exit");
             System.out.print("Enter choice: ");
             String choice = sc.nextLine().trim();
 
             switch (choice) {
                 case "1" -> login(sc, userManager, manager, waitlist, logger);
                 case "2" -> register(sc, userManager);
-                case "3" -> {
-                    System.out.println("Exiting Smart Parking System.");
+                case "3" -> manager.printStatistics();
+                case "4" -> {
+                    System.out.println("👋 Exiting Smart Parking System.");
                     manager.persistParkingData(PARKING_FILE);
                     waitlist.persist();
                     running = false;
                 }
-                default -> System.out.println("❌ Invalid choice.");
+                default -> System.out.println("❌ Invalid choice. Please enter 1, 2, 3, or 4.");
             }
         }
         sc.close();
@@ -59,7 +62,7 @@ public class Main {
             if (u.type.equals("ADMIN")) adminPanel(sc, manager, waitlist, logger, userManager);
             else userPanel(sc, manager, waitlist, logger);
         } else {
-            System.out.println("❌ Invalid credentials.");
+            System.out.println("❌ Invalid credentials. Try again.");
         }
     }
 
@@ -71,26 +74,33 @@ public class Main {
             String pass = sc.nextLine().trim();
             System.out.print("Enter type (ADMIN/USER): ");
             String type = sc.nextLine().trim().toUpperCase();
-            if (type.equals("ADMIN") || type.equals("USER")) {
-                if (userManager.addUser(uname, pass, type)) System.out.println("✅ User added!");
-                else System.out.println("❌ User already exists.");
-            } else {
+
+            if (!type.equals("ADMIN") && !type.equals("USER")) {
                 System.out.println("❌ Invalid type. Must be ADMIN or USER.");
+                return;
+            }
+
+            if (userManager.addUser(uname, pass, type)) {
+                System.out.println("✅ User added successfully!");
+            } else {
+                System.out.println("❌ User already exists.");
             }
         } catch (Exception ex) {
-            System.out.println("Error adding user: " + ex.getMessage());
+            System.out.println("❌ Error adding user: " + ex.getMessage());
         }
     }
 
     private static void userPanel(Scanner sc, ParkingManager manager, WaitlistManager waitlist,
                                   LogManager logger) {
         while (true) {
-            System.out.println("\n--- User Menu ---");
-            System.out.println("1. Search Vehicle");
-            System.out.println("2. Recommend Parking");
-            System.out.println("3. Reserve Vehicle");
-            System.out.println("4. Free Vehicle");
-            System.out.println("5. Logout");
+            System.out.println("\n--- 🧑‍💻 USER MENU ---");
+            System.out.println("1️⃣ Search Vehicle");
+            System.out.println("2️⃣ Smart Parking Recommendation");
+            System.out.println("3️⃣ Reserve Vehicle");
+            System.out.println("4️⃣ Free Vehicle");
+            System.out.println("5️⃣ Get Directions");
+            System.out.println("6️⃣ View Parking Status");
+            System.out.println("7️⃣ Logout");
             System.out.print("Choice: ");
             String choice = sc.nextLine().trim();
 
@@ -103,122 +113,152 @@ public class Main {
                     else System.out.println("🚗 Vehicle found at slot: " + slot);
                 }
 
-                case "2" -> {
-                    System.out.println("Available locations: " + GeoDB.availableNames());
-                    System.out.print("Enter current location name: ");
-                    String currentLoc = sc.nextLine().trim().toUpperCase();
-
-                    // Validate location
-                    if (!GeoDB.availableNames().contains(currentLoc)) {
-                        System.out.println("❌ Invalid location. Available: " + GeoDB.availableNames());
-                        break;
-                    }
-
-                    // Get available parking lots (excluding current location)
-                    List<ParkingLot> availableLots = manager.getAvailableParkingLots();
-                    List<ParkingLot> filteredLots = new ArrayList<>();
-                    
-                    for (ParkingLot lot : availableLots) {
-                        if (!lot.locationName.equals(currentLoc) && lot.availableSlots > 0) {
-                            filteredLots.add(lot);
-                        }
-                    }
-
-                    if (filteredLots.isEmpty()) {
-                        System.out.println("❌ No available parking lots found at different locations.");
-                        break;
-                    }
-
-                    // Find nearest parking
-                    ParkingLot nearestLot = null;
-                    double minDistance = Double.MAX_VALUE;
-                    
-                    for (ParkingLot lot : filteredLots) {
-                        double distance = manager.getDistance(currentLoc, lot.locationName);
-                        if (distance < minDistance && distance > 0) {
-                            minDistance = distance;
-                            nearestLot = lot;
-                        }
-                    }
-
-                    if (nearestLot != null) {
-                        System.out.println("\n📍 Your current location: " + currentLoc);
-                        System.out.println("🎯 Recommended Parking: " + nearestLot);
-                        System.out.printf("📏 Distance: %.2f km%n", minDistance);
-                        System.out.printf("⏱️ Estimated travel time (30 km/h avg): %.1f min%n", (minDistance / 30.0) * 60);
-
-                        // Directions
-                        System.out.print("\nDo you want directions to this parking? (Y/N): ");
-                        String ans = sc.nextLine().trim().toUpperCase();
-                        if (ans.equals("Y")) {
-                            List<String> path = manager.getDirections(currentLoc, nearestLot.locationName);
-                            if (path != null && !path.isEmpty()) {
-                                System.out.println("\n🗺️ Route from " + currentLoc + " to " + nearestLot.locationName + ":");
-                                for (int i = 0; i < path.size(); i++) {
-                                    System.out.println("📍 " + path.get(i));
-                                    if (i < path.size() - 1) {
-                                        System.out.println("  ↓");
-                                    }
-                                }
-                            } else {
-                                System.out.println("❌ No route found.");
-                            }
-                        }
-
-                        // Reservation
-                        System.out.print("\nDo you want to reserve a slot at this parking? (Y/N): ");
-                        String bookAns = sc.nextLine().trim().toUpperCase();
-                        if (bookAns.equals("Y")) {
-                            System.out.print("Enter vehicle number to reserve: ");
-                            String vnBook = sc.nextLine().trim().toUpperCase();
-                            if (!vnBook.isEmpty()) {
-                                boolean ok = manager.reserveVehicleAtLot(vnBook, nearestLot.id);
-                                if (ok) {
-                                    System.out.println("✅ Parking booked successfully at " + nearestLot.locationName);
-                                    manager.persistParkingData(PARKING_FILE);
-                                } else {
-                                    System.out.println("❌ Failed to book parking. Slot may be taken.");
-                                }
-                            } else {
-                                System.out.println("❌ Vehicle number cannot be empty.");
-                            }
-                        }
-                        logger.log("RECOMMEND", "User@" + currentLoc + " -> " + nearestLot.locationName + " | Distance: " + minDistance + "km");
-                    } else {
-                        System.out.println("❌ No suitable parking found.");
-                    }
-                }
+                case "2" -> smartParkingRecommendation(sc, manager, logger);
 
                 case "3" -> {
                     System.out.print("Enter vehicle number to reserve: ");
                     String vnBook = sc.nextLine().trim().toUpperCase();
-                    boolean ok = manager.reserveVehicle(vnBook);
-                    if (ok) {
-                        System.out.println("✅ Vehicle reserved successfully.");
-                        manager.persistParkingData(PARKING_FILE);
-                    } else {
-                        System.out.println("❌ Failed to reserve vehicle. No available slots.");
+                    if (vnBook.isEmpty()) {
+                        System.out.println("❌ Vehicle number cannot be empty.");
+                        break;
                     }
+                    
+                    System.out.println("\n🅿️ Available Parking Lots:");
+                    List<ParkingLot> availableLots = manager.getAvailableParkingLots();
+                    if (availableLots.isEmpty()) {
+                        System.out.println("❌ No available parking lots.");
+                        break;
+                    }
+                    
+                    // Show available lots with details
+                    for (int i = 0; i < availableLots.size(); i++) {
+                        ParkingLot lot = availableLots.get(i);
+                        System.out.printf("%d. %s | %s | Available: %d/%d | Rating: %.1f%n",
+                            i + 1, lot.id, lot.locationName, lot.availableSlots, 
+                            lot.totalSlots, lot.rating);
+                    }
+                    
+                    System.out.print("Enter parking lot ID to reserve at (or press Enter for auto-assign): ");
+                    String lotId = sc.nextLine().trim();
+                    
+                    boolean ok;
+                    if (lotId.isEmpty()) {
+                        ok = manager.reserveVehicle(vnBook);
+                    } else {
+                        ok = manager.reserveVehicleAtLot(vnBook, lotId);
+                    }
+                    
+                    System.out.println(ok ? "✅ Vehicle reserved successfully." : "❌ No available slots. Added to waitlist.");
+                    manager.persistParkingData(PARKING_FILE);
                 }
 
                 case "4" -> {
                     System.out.print("Enter vehicle number to free: ");
                     String vnCancel = sc.nextLine().trim().toUpperCase();
                     boolean okFree = manager.freeByVehicle(vnCancel);
-                    if (okFree) {
-                        System.out.println("✅ Vehicle freed successfully.");
-                        manager.persistParkingData(PARKING_FILE);
-                    } else {
-                        System.out.println("❌ Vehicle not found or already free.");
-                    }
+                    System.out.println(okFree ? "✅ Vehicle freed successfully." : "❌ Vehicle not found or already free.");
+                    manager.persistParkingData(PARKING_FILE);
                 }
 
-                case "5" -> {
-                    System.out.println("Logging out from User panel.");
+                case "5" -> getDirections(sc, manager);
+
+                case "6" -> manager.printParkingStatus();
+
+                case "7" -> {
+                    System.out.println("👋 Logging out from User panel.");
                     return;
                 }
 
-                default -> System.out.println("❌ Invalid choice.");
+                default -> System.out.println("❌ Invalid choice. Enter 1-7.");
+            }
+        }
+    }
+
+    private static void smartParkingRecommendation(Scanner sc, ParkingManager manager, LogManager logger) {
+        System.out.println("📍 Available locations: " + GeoDB.availableNames());
+        System.out.print("Enter your current location: ");
+        String currentLoc = sc.nextLine().trim().toUpperCase();
+
+        if (!GeoDB.availableNames().contains(currentLoc)) {
+            System.out.println("❌ Invalid location. Available: " + GeoDB.availableNames());
+            return;
+        }
+
+        System.out.println("\n🎯 Finding best parking options...");
+        ParkingManager.RouteDetails routeDetails = manager.getDetailedRoute(currentLoc, "ANY_PARKING");
+        
+        ParkingLot recommendedLot = manager.recommendNearestFromLocation(currentLoc);
+        
+        if (recommendedLot == null) {
+            System.out.println("❌ No suitable parking found.");
+            return;
+        }
+
+        // Show detailed route to the recommended parking
+        System.out.print("\nDo you want detailed directions to this parking? (Y/N): ");
+        if (sc.nextLine().trim().equalsIgnoreCase("Y")) {
+            List<String> directions = manager.getDirections(currentLoc, recommendedLot.locationName);
+            System.out.println("\n" + "═".repeat(60));
+            for (String direction : directions) {
+                System.out.println(direction);
+            }
+            System.out.println("═".repeat(60));
+        }
+
+        System.out.print("\nDo you want to reserve a slot here? (Y/N): ");
+        if (sc.nextLine().trim().equalsIgnoreCase("Y")) {
+            System.out.print("Enter vehicle number: ");
+            String vnBook = sc.nextLine().trim().toUpperCase();
+            if (!vnBook.isEmpty() && manager.reserveVehicleAtLot(vnBook, recommendedLot.id)) {
+                System.out.println("✅ Parking booked successfully at " + recommendedLot.locationName);
+                manager.persistParkingData(PARKING_FILE);
+                
+                // Show confirmation with route
+                System.out.print("Show route to parking? (Y/N): ");
+                if (sc.nextLine().trim().equalsIgnoreCase("Y")) {
+                    List<String> finalRoute = manager.getDirections(currentLoc, recommendedLot.locationName);
+                    System.out.println("\n" + "🚗 YOUR ROUTE TO PARKING:");
+                    System.out.println("═".repeat(50));
+                    for (String step : finalRoute) {
+                        System.out.println(step);
+                    }
+                }
+            } else {
+                System.out.println("❌ Failed to book parking. Slot may be taken.");
+            }
+        }
+
+        logger.log("SMART_RECOMMEND", "User@" + currentLoc + " -> " + recommendedLot.locationName);
+    }
+
+    private static void getDirections(Scanner sc, ParkingManager manager) {
+        System.out.println("📍 Available locations: " + GeoDB.availableNames());
+        System.out.print("Enter starting location: ");
+        String from = sc.nextLine().trim().toUpperCase();
+        System.out.print("Enter destination: ");
+        String to = sc.nextLine().trim().toUpperCase();
+        manager.printShortestPathNodes(from, to);
+
+        if (!GeoDB.availableNames().contains(from) || !GeoDB.availableNames().contains(to)) {
+            System.out.println("❌ Invalid location(s). Available: " + GeoDB.availableNames());
+            return;
+        }
+
+        System.out.println("\n" + "═".repeat(60));
+        List<String> directions = manager.getDirections(from, to);
+        for (String direction : directions) {
+            System.out.println(direction);
+        }
+        System.out.println("═".repeat(60));
+        
+        // Also show detailed route using RouteDetails
+        System.out.print("\nShow detailed route analysis? (Y/N): ");
+        if (sc.nextLine().trim().equalsIgnoreCase("Y")) {
+            ParkingManager.RouteDetails routeDetails = manager.getDetailedRoute(from, to);
+            if (!routeDetails.hasError()) {
+                routeDetails.printDetailedRoute();
+            } else {
+                System.out.println("❌ " + routeDetails.getError());
             }
         }
     }
@@ -226,15 +266,18 @@ public class Main {
     private static void adminPanel(Scanner sc, ParkingManager manager, WaitlistManager waitlist,
                                    LogManager logger, UserManager userManager) {
         while (true) {
-            System.out.println("\n--- Admin Menu ---");
-            System.out.println("1. Add Vehicle");
-            System.out.println("2. Free Vehicle");
-            System.out.println("3. Display Parking Status");
-            System.out.println("4. Emergency Free Slot");
-            System.out.println("5. View Waitlist");
-            System.out.println("6. View Logs (last 50 lines)");
-            System.out.println("7. Add New User/Admin");
-            System.out.println("8. Logout");
+            System.out.println("\n--- 🛠️ ADMIN MENU ---");
+            System.out.println("1️⃣ Add Vehicle");
+            System.out.println("2️⃣ Free Vehicle");
+            System.out.println("3️⃣ Display Parking Status");
+            System.out.println("4️⃣ Emergency Free Slot");
+            System.out.println("5️⃣ View Waitlist");
+            System.out.println("6️⃣ View Logs (last 50 lines)");
+            System.out.println("7️⃣ Add New User/Admin");
+            System.out.println("8️⃣ System Statistics");
+            System.out.println("9️⃣ Clear Distance Cache");
+            System.out.println("🔟 Get Directions (Admin)");
+            System.out.println("⏸️ Logout");
             System.out.print("Choice: ");
             String choice = sc.nextLine().trim();
 
@@ -242,35 +285,61 @@ public class Main {
                 case "1" -> {
                     System.out.print("Enter vehicle number: ");
                     String vnAdd = sc.nextLine().trim().toUpperCase();
-                    boolean added = manager.reserveVehicle(vnAdd);
-                    if (added) {
-                        System.out.println("✅ Vehicle added successfully.");
-                        manager.persistParkingData(PARKING_FILE);
+                    
+                    System.out.print("Enter specific parking lot ID (or press Enter for auto-assign): ");
+                    String lotId = sc.nextLine().trim();
+                    
+                    boolean added;
+                    if (lotId.isEmpty()) {
+                        added = manager.reserveVehicle(vnAdd);
                     } else {
-                        System.out.println("❌ Failed to add vehicle. No available slots.");
+                        added = manager.reserveVehicleAtLot(vnAdd, lotId);
                     }
+                    
+                    System.out.println(added ? "✅ Vehicle added successfully." : "❌ No available slots.");
+                    manager.persistParkingData(PARKING_FILE);
                 }
+                
                 case "2" -> {
                     System.out.print("Enter vehicle number to free: ");
                     String vnFree = sc.nextLine().trim().toUpperCase();
                     boolean freed = manager.freeByVehicle(vnFree);
-                    if (freed) {
-                        System.out.println("✅ Vehicle freed successfully.");
-                        manager.persistParkingData(PARKING_FILE);
-                    } else {
-                        System.out.println("❌ Vehicle not found or already free.");
-                    }
+                    System.out.println(freed ? "✅ Vehicle freed successfully." : "❌ Vehicle not found.");
+                    manager.persistParkingData(PARKING_FILE);
                 }
+                
                 case "3" -> manager.printParkingStatus();
+                
                 case "4" -> manager.emergencyFreeSlot(sc);
-                case "5" -> System.out.println("Waitlist snapshot: " + waitlist.snapshot());
-                case "6" -> logger.printLastLines(50);
+                
+                case "5" -> {
+                    System.out.println("\n--- 📋 WAITLIST STATUS ---");
+                    System.out.println("Waitlisted vehicles: " + (waitlist.isEmpty() ? "None" : waitlist.snapshot()));
+                    System.out.println("Waitlist size: " + waitlist.snapshot().size());
+                }
+                
+                case "6" -> {
+                    System.out.println("\n--- 📊 RECENT LOGS ---");
+                    logger.printLastLines(50);
+                }
+                
                 case "7" -> register(sc, userManager);
-                case "8" -> {
-                    System.out.println("Logging out from Admin panel.");
+                
+                case "8" -> manager.printStatistics();
+                
+                case "9" -> {
+                    manager.clearCache();
+                    System.out.println("✅ Distance cache cleared.");
+                }
+                
+                case "10" -> getDirections(sc, manager);
+                
+                case "0" -> {
+                    System.out.println("👋 Logging out from Admin panel.");
                     return;
                 }
-                default -> System.out.println("❌ Invalid choice.");
+                
+                default -> System.out.println("❌ Invalid choice. Enter 1-10 or 0 to logout.");
             }
         }
     }

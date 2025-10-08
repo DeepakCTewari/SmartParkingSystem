@@ -9,3 +9,16 @@
 2025-10-07 20:53:47 | RECOMMEND | User@B -> C | Distance: 2.0km
 2025-10-07 20:54:41 | PARK | UK07 4675 at 1
 2025-10-07 20:55:10 | FREE | UK07 4675 from 1
+2025-10-07 21:19:35 | RECOMMEND | User@D -> E | Distance: 2.0 km
+2025-10-07 21:32:14 | RECOMMEND | User@D -> E | Distance: 2.0 km
+2025-10-07 21:52:59 | RECOMMEND | User@D -> E | Distance: 2.0 km
+2025-10-07 21:53:11 | RECOMMEND | User@F -> E | Distance: 4.0 km
+2025-10-07 22:24:07 | RECOMMEND | User@F -> E | Distance: 4.0 km
+2025-10-08 06:13:06 | SMART_RECOMMEND | User selected C | Score: 0.796 | Distance: 5.0km | Cost: $8.00 | Facilities: 0.2
+2025-10-08 06:28:54 | SMART_RECOMMEND | User@G -> C
+2025-10-08 06:29:04 | SMART_RECOMMEND | User selected B | Score: 0.781 | Distance: 7.0km | Cost: $15.00 | Facilities: 1.0
+2025-10-08 06:35:19 | PARK | UK 07 1234 at lot 2 | Slots left: 39
+2025-10-08 06:35:19 | DATA_SAVE | Parking data persisted | Lots: 10
+2025-10-08 06:35:26 | SMART_RECOMMEND | User@G -> B
+2025-10-08 06:36:22 | RESERVE_FAIL | UK 07 1234 - Already at lot 2
+2025-10-08 06:36:22 | DATA_SAVE | Parking data persisted | Lots: 10
